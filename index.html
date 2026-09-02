@@ -102,7 +102,6 @@
       pointer-events: none;
     }
 
-    /* Increased edit mode visibility for removed bars */
     .edit-mode .key-bar.removed {
       opacity: 0.45;
       pointer-events: auto;
@@ -215,6 +214,8 @@
     ];
 
     let audioCtx = null;
+    let masterGain = null;
+    let limiter = null;
     let isEditMode = false;
     let shortcutsVisible = false;
     let isPointerDown = false;
@@ -223,6 +224,21 @@
     function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Master Gain Node to prevent clipping when summing multiple notes
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.3;
+
+        // Dynamics Compressor acting as an anti-clipping limiter
+        limiter = audioCtx.createDynamicsCompressor();
+        limiter.threshold.setValueAtTime(-3, audioCtx.currentTime);
+        limiter.knee.setValueAtTime(0, audioCtx.currentTime);
+        limiter.ratio.setValueAtTime(20, audioCtx.currentTime);
+        limiter.attack.setValueAtTime(0.001, audioCtx.currentTime);
+        limiter.release.setValueAtTime(0.05, audioCtx.currentTime);
+
+        masterGain.connect(limiter);
+        limiter.connect(audioCtx.destination);
       }
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -262,9 +278,10 @@
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(Math.min(freq * 2.2, 2200), now);
 
+      // Route individual note signal through the Master Bus
       carrier.connect(carrierGain);
       carrierGain.connect(filter);
-      filter.connect(audioCtx.destination);
+      filter.connect(masterGain);
 
       carrier.start(now);
       modulator.start(now);
