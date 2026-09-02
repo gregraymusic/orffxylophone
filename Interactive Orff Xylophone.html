@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orff Interactive Xylophone - Soft Yarn Mallet Sound</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --bar-color: #793802;
+      --bar-hover: #964704;
+      --bar-active: #b85705;
+      --text-color: #ffffff;
+      --subtext-color: #ffd8a8;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      touch-action: none;
+    }
+
+    .header {
+      width: 100%;
+      padding-top: 24px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      color: #1e293b;
+      letter-spacing: -0.025em;
+    }
+
+    .xylophone-container {
+      width: 95vw;
+      height: 72vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 20px 40px;
+      border-radius: 16px;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .xylophone-container.edit-mode {
+      background-color: #fef3c7;
+      box-shadow: inset 0 0 0 3px #d97706;
+    }
+
+    .key-bar {
+      flex: 1;
+      max-width: 100px;
+      position: relative;
+      background-color: var(--bar-color);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 30px;
+      cursor: pointer;
+      box-shadow: 3px 6px 12px rgba(0, 0, 0, 0.25);
+      transition: transform 0.05s ease, background-color 0.1s ease, opacity 0.2s ease;
+    }
+
+    .key-bar:hover {
+      background-color: var(--bar-hover);
+    }
+
+    .key-bar:active,
+    .key-bar.active {
+      background-color: var(--bar-active);
+      transform: scale(0.98);
+      box-shadow: 1px 3px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .edit-mode .key-bar:hover {
+      outline: 3px dashed #d97706;
+      outline-offset: 3px;
+    }
+
+    .key-bar.removed {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Increased edit mode visibility for removed bars */
+    .edit-mode .key-bar.removed {
+      opacity: 0.45;
+      pointer-events: auto;
+      background-color: #64748b;
+    }
+
+    .note-label {
+      color: var(--text-color);
+      font-weight: 800;
+      font-size: 3rem;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    .key-shortcut {
+      color: var(--subtext-color);
+      font-weight: 700;
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      pointer-events: none;
+      text-transform: uppercase;
+      opacity: 1;
+      transition: opacity 0.2s ease;
+    }
+
+    .key-shortcut.hidden {
+      display: none;
+    }
+
+    .controls-bottom {
+      width: 100%;
+      padding-bottom: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .btn {
+      background-color: #793802;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.15s ease, transform 0.05s ease;
+    }
+
+    .btn:hover {
+      background-color: #964704;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn.active-mode {
+      background-color: #d97706;
+    }
+
+    .btn.active-mode:hover {
+      background-color: #b45309;
+    }
+
+    .bar-0  { height: 100%; }
+    .bar-1  { height: 96%; }
+    .bar-2  { height: 92%; }
+    .bar-3  { height: 88%; }
+    .bar-4  { height: 84%; }
+    .bar-5  { height: 80%; }
+    .bar-6  { height: 76%; }
+    .bar-7  { height: 72%; }
+    .bar-8  { height: 68%; }
+    .bar-9  { height: 64%; }
+    .bar-10 { height: 60%; }
+    .bar-11 { height: 56%; }
+    .bar-12 { height: 52%; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Interactive Orff Xylophone</h1>
+  </div>
+
+  <div class="xylophone-container" id="xylophone"></div>
+
+  <div class="controls-bottom">
+    <button class="btn" id="editBarsBtn">Add / Remove Bars</button>
+    <button class="btn" id="toggleShortcutsBtn">Show Shortcuts</button>
+  </div>
+
+  <script>
+    const notes = [
+      { name: 'C', freq: 261.63, key: '`', labelKey: '~' },
+      { name: 'D', freq: 293.66, key: '1', labelKey: '1' },
+      { name: 'E', freq: 329.63, key: '2', labelKey: '2' },
+      { name: 'F', freq: 349.23, key: '3', labelKey: '3' },
+      { name: 'G', freq: 392.00, key: '4', labelKey: '4' },
+      { name: 'A', freq: 440.00, key: '5', labelKey: '5' },
+      { name: 'B', freq: 493.88, key: '6', labelKey: '6' },
+      { name: 'C', freq: 523.25, key: '7', labelKey: '7' },
+      { name: 'D', freq: 587.33, key: '8', labelKey: '8' },
+      { name: 'E', freq: 659.25, key: '9', labelKey: '9' },
+      { name: 'F', freq: 698.46, key: '0', labelKey: '0' },
+      { name: 'G', freq: 783.99, key: '-', labelKey: '-' },
+      { name: 'A', freq: 880.00, key: '=', labelKey: '=' }
+    ];
+
+    let audioCtx = null;
+    let isEditMode = false;
+    let shortcutsVisible = false;
+    let isPointerDown = false;
+    let activePointers = new Map();
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq) {
+      initAudio();
+
+      const now = audioCtx.currentTime;
+      
+      const carrier = audioCtx.createOscillator();
+      const carrierGain = audioCtx.createGain();
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(freq, now);
+
+      const modulator = audioCtx.createOscillator();
+      const modGain = audioCtx.createGain();
+      modulator.type = 'sine';
+      
+      const overtoneRatio = 3.92;
+      modulator.frequency.setValueAtTime(freq * overtoneRatio, now);
+
+      const modDepth = freq * 0.9; 
+      modGain.gain.setValueAtTime(modDepth, now);
+      modGain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+
+      const duration = 0.65;
+      carrierGain.gain.setValueAtTime(0, now);
+      carrierGain.gain.linearRampToValueAtTime(0.9, now + 0.003);
+      carrierGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.min(freq * 2.2, 2200), now);
+
+      carrier.connect(carrierGain);
+      carrierGain.connect(filter);
+      filter.connect(audioCtx.destination);
+
+      carrier.start(now);
+      modulator.start(now);
+      carrier.stop(now + duration);
+      modulator.stop(now + duration);
+    }
+
+    const container = document.getElementById('xylophone');
+    const keyMap = {};
+
+    notes.forEach((note, index) => {
+      const bar = document.createElement('div');
+      bar.className = `key-bar bar-${index}`;
+      bar.dataset.removed = "false";
+      bar.dataset.index = index;
+      
+      const shortcut = document.createElement('span');
+      shortcut.className = 'key-shortcut hidden';
+      shortcut.textContent = `[${note.labelKey}]`;
+
+      const label = document.createElement('span');
+      label.className = 'note-label';
+      label.textContent = note.name;
+      
+      bar.appendChild(shortcut);
+      bar.appendChild(label);
+      container.appendChild(bar);
+
+      const trigger = () => {
+        if (bar.dataset.removed === "true") return;
+
+        playTone(note.freq);
+        bar.classList.add('active');
+        setTimeout(() => bar.classList.remove('active'), 120);
+      };
+
+      keyMap[note.key] = trigger;
+      if (note.key === '`') {
+        keyMap['~'] = trigger;
+      }
+    });
+
+    function handleBarInteraction(targetBar, pointerId) {
+      if (!targetBar || !targetBar.classList.contains('key-bar')) return;
+
+      const barIndex = targetBar.dataset.index;
+      if (activePointers.get(pointerId) === barIndex) return;
+
+      activePointers.set(pointerId, barIndex);
+
+      if (isEditMode) {
+        const isRemoved = targetBar.dataset.removed === "true";
+        targetBar.dataset.removed = !isRemoved;
+        targetBar.classList.toggle('removed', !isRemoved);
+      } else {
+        if (targetBar.dataset.removed !== "true") {
+          const noteData = notes[barIndex];
+          playTone(noteData.freq);
+          targetBar.classList.add('active');
+          setTimeout(() => targetBar.classList.remove('active'), 120);
+        }
+      }
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      isPointerDown = true;
+      const targetBar = document.elementFromPoint(e.clientX, e.clientY);
+      handleBarInteraction(targetBar, e.pointerId);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isPointerDown) return;
+      const targetBar = document.elementFromPoint(e.clientX, e.clientY);
+      handleBarInteraction(targetBar, e.pointerId);
+    });
+
+    const endPointer = (e) => {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size === 0) {
+        isPointerDown = false;
+      }
+    };
+
+    window.addEventListener('pointerup', endPointer);
+    window.addEventListener('pointercancel', endPointer);
+
+    const editBtn = document.getElementById('editBarsBtn');
+    editBtn.addEventListener('click', () => {
+      isEditMode = !isEditMode;
+      container.classList.toggle('edit-mode', isEditMode);
+      editBtn.classList.toggle('active-mode', isEditMode);
+      editBtn.textContent = isEditMode ? 'Done Editing' : 'Add / Remove Bars';
+    });
+
+    const toggleBtn = document.getElementById('toggleShortcutsBtn');
+
+    toggleBtn.addEventListener('click', () => {
+      shortcutsVisible = !shortcutsVisible;
+      const shortcutLabels = document.querySelectorAll('.key-shortcut');
+      
+      shortcutLabels.forEach(el => {
+        if (shortcutsVisible) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      toggleBtn.textContent = shortcutsVisible ? 'Hide Shortcuts' : 'Show Shortcuts';
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (keyMap[e.key] && !e.repeat) {
+        keyMap[e.key]();
+      }
+    });
+  </script>
+</body>
+</html>
