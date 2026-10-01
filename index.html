@@ -37,20 +37,66 @@
 
     .header {
       width: 100%;
-      padding-top: 24px;
+      padding-top: 16px;
       text-align: center;
     }
 
     .header h1 {
       margin: 0;
-      font-size: 2.5rem;
+      font-size: 2rem;
       color: #1e293b;
       letter-spacing: -0.025em;
     }
 
+    /* Music Staff Container */
+    .staff-container {
+      width: 320px;
+      height: 120px;
+      margin-top: 8px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      display: none; /* Hidden by default */
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .staff-container.visible {
+      display: flex;
+    }
+
+    .staff-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .staff-line {
+      stroke: #334155;
+      stroke-width: 1.5;
+    }
+
+    .note-head {
+      fill: #1e293b;
+      transition: opacity 0.15s ease;
+    }
+
+    .note-stem, .ledger-line {
+      stroke: #1e293b;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+    }
+
+    .note-name-text {
+      font-size: 14px;
+      font-weight: 700;
+      fill: #d97706;
+      font-family: inherit;
+    }
+
     .xylophone-container {
       width: 95vw;
-      height: 72vh;
+      height: 58vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -133,7 +179,7 @@
 
     .controls-bottom {
       width: 100%;
-      padding-bottom: 28px;
+      padding-bottom: 24px;
       display: flex;
       justify-content: center;
       gap: 20px;
@@ -189,28 +235,56 @@
     <h1>Interactive Orff Xylophone</h1>
   </div>
 
+  <!-- Music Staff Visualizer -->
+  <div class="staff-container" id="staffContainer">
+    <svg class="staff-svg" viewBox="0 0 240 120" id="staffSvg">
+      <!-- 5 Staff Lines (Heights: 35, 45, 55, 65, 75) -->
+      <line x1="20" y1="35" x2="220" y2="35" class="staff-line" />
+      <line x1="20" y1="45" x2="220" y2="45" class="staff-line" />
+      <line x1="20" y1="55" x2="220" y2="55" class="staff-line" />
+      <line x1="20" y1="65" x2="220" y2="65" class="staff-line" />
+      <line x1="20" y1="75" x2="220" y2="75" class="staff-line" />
+
+      <!-- Dynamic Note Elements Group -->
+      <g id="noteGroup" opacity="0">
+        <!-- Optional Ledger Lines -->
+        <g id="ledgerLines"></g>
+
+        <!-- Note Head -->
+        <ellipse id="noteHead" cx="120" cy="55" rx="6.5" ry="4.5" class="note-head" transform="rotate(-20 120 55)" />
+
+        <!-- Note Stem -->
+        <line id="noteStem" x1="126.5" y1="55" x2="126.5" y2="25" class="note-stem" />
+
+        <!-- Pitch Text Label -->
+        <text id="pitchText" x="120" y="110" text-anchor="middle" class="note-name-text">C4</text>
+      </g>
+    </svg>
+  </div>
+
   <div class="xylophone-container" id="xylophone"></div>
 
   <div class="controls-bottom">
+    <button class="btn" id="toggleStaffBtn">Show Staff</button>
     <button class="btn" id="editBarsBtn">Add / Remove Bars</button>
     <button class="btn" id="toggleShortcutsBtn">Show Shortcuts</button>
   </div>
 
   <script>
     const notes = [
-      { name: 'C', freq: 261.63, key: '`', labelKey: '~' },
-      { name: 'D', freq: 293.66, key: '1', labelKey: '1' },
-      { name: 'E', freq: 329.63, key: '2', labelKey: '2' },
-      { name: 'F', freq: 349.23, key: '3', labelKey: '3' },
-      { name: 'G', freq: 392.00, key: '4', labelKey: '4' },
-      { name: 'A', freq: 440.00, key: '5', labelKey: '5' },
-      { name: 'B', freq: 493.88, key: '6', labelKey: '6' },
-      { name: 'C', freq: 523.25, key: '7', labelKey: '7' },
-      { name: 'D', freq: 587.33, key: '8', labelKey: '8' },
-      { name: 'E', freq: 659.25, key: '9', labelKey: '9' },
-      { name: 'F', freq: 698.46, key: '0', labelKey: '0' },
-      { name: 'G', freq: 783.99, key: '-', labelKey: '-' },
-      { name: 'A', freq: 880.00, key: '=', labelKey: '=' }
+      { name: 'C', octave: '4', freq: 261.63, key: '`', labelKey: '~', yPos: 85, stemUp: true, ledger: [85] },
+      { name: 'D', octave: '4', freq: 293.66, key: '1', labelKey: '1', yPos: 80, stemUp: true, ledger: [] },
+      { name: 'E', octave: '4', freq: 329.63, key: '2', labelKey: '2', yPos: 75, stemUp: true, ledger: [] },
+      { name: 'F', octave: '4', freq: 349.23, key: '3', labelKey: '3', yPos: 70, stemUp: true, ledger: [] },
+      { name: 'G', octave: '4', freq: 392.00, key: '4', labelKey: '4', yPos: 65, stemUp: true, ledger: [] },
+      { name: 'A', octave: '4', freq: 440.00, key: '5', labelKey: '5', yPos: 60, stemUp: true, ledger: [] },
+      { name: 'B', octave: '4', freq: 493.88, key: '6', labelKey: '6', yPos: 55, stemUp: true, ledger: [] },
+      { name: 'C', octave: '5', freq: 523.25, key: '7', labelKey: '7', yPos: 50, stemUp: false, ledger: [] },
+      { name: 'D', octave: '5', freq: 587.33, key: '8', labelKey: '8', yPos: 45, stemUp: false, ledger: [] },
+      { name: 'E', octave: '5', freq: 659.25, key: '9', labelKey: '9', yPos: 40, stemUp: false, ledger: [] },
+      { name: 'F', octave: '5', freq: 698.46, key: '0', labelKey: '0', yPos: 35, stemUp: false, ledger: [] },
+      { name: 'G', octave: '5', freq: 783.99, key: '-', labelKey: '-', yPos: 30, stemUp: false, ledger: [] },
+      { name: 'A', octave: '5', freq: 880.00, key: '=', labelKey: '=', yPos: 25, stemUp: false, ledger: [25] }
     ];
 
     let audioCtx = null;
@@ -218,18 +292,77 @@
     let limiter = null;
     let isEditMode = false;
     let shortcutsVisible = false;
+    let staffVisible = false;
     let isPointerDown = false;
     let activePointers = new Map();
+    let noteTimeout = null;
+
+    const staffContainer = document.getElementById('staffContainer');
+    const toggleStaffBtn = document.getElementById('toggleStaffBtn');
+    const noteGroup = document.getElementById('noteGroup');
+    const noteHead = document.getElementById('noteHead');
+    const noteStem = document.getElementById('noteStem');
+    const ledgerLines = document.getElementById('ledgerLines');
+    const pitchText = document.getElementById('pitchText');
+
+    toggleStaffBtn.addEventListener('click', () => {
+      staffVisible = !staffVisible;
+      staffContainer.classList.toggle('visible', staffVisible);
+      toggleStaffBtn.classList.toggle('active-mode', staffVisible);
+      toggleStaffBtn.textContent = staffVisible ? 'Hide Staff' : 'Show Staff';
+    });
+
+    function displayNoteOnStaff(noteData) {
+      if (!staffVisible) return;
+
+      const y = noteData.yPos;
+      
+      noteHead.setAttribute('cx', 120);
+      noteHead.setAttribute('cy', y);
+      noteHead.setAttribute('transform', `rotate(-20 120 ${y})`);
+
+      if (noteData.stemUp) {
+        noteStem.setAttribute('x1', 126.5);
+        noteStem.setAttribute('y1', y);
+        noteStem.setAttribute('x2', 126.5);
+        noteStem.setAttribute('y2', y - 28);
+      } else {
+        noteStem.setAttribute('x1', 113.5);
+        noteStem.setAttribute('y1', y);
+        noteStem.setAttribute('x2', 113.5);
+        noteStem.setAttribute('y2', y + 28);
+      }
+
+      ledgerLines.innerHTML = '';
+      if (noteData.ledger && noteData.ledger.length > 0) {
+        noteData.ledger.forEach(ly => {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', 108);
+          line.setAttribute('y1', ly);
+          line.setAttribute('x2', 132);
+          line.setAttribute('y2', ly);
+          line.setAttribute('class', 'ledger-line');
+          ledgerLines.appendChild(line);
+        });
+      }
+
+      pitchText.textContent = `${noteData.name}${noteData.octave}`;
+
+      noteGroup.setAttribute('opacity', '1');
+
+      clearTimeout(noteTimeout);
+      noteTimeout = setTimeout(() => {
+        noteGroup.setAttribute('opacity', '0');
+      }, 1200);
+    }
 
     function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Master Gain Node to prevent clipping when summing multiple notes
         masterGain = audioCtx.createGain();
         masterGain.gain.value = 0.3;
 
-        // Dynamics Compressor acting as an anti-clipping limiter
         limiter = audioCtx.createDynamicsCompressor();
         limiter.threshold.setValueAtTime(-3, audioCtx.currentTime);
         limiter.knee.setValueAtTime(0, audioCtx.currentTime);
@@ -278,7 +411,6 @@
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(Math.min(freq * 2.2, 2200), now);
 
-      // Route individual note signal through the Master Bus
       carrier.connect(carrierGain);
       carrierGain.connect(filter);
       filter.connect(masterGain);
@@ -314,6 +446,7 @@
         if (bar.dataset.removed === "true") return;
 
         playTone(note.freq);
+        displayNoteOnStaff(note);
         bar.classList.add('active');
         setTimeout(() => bar.classList.remove('active'), 120);
       };
@@ -340,6 +473,7 @@
         if (targetBar.dataset.removed !== "true") {
           const noteData = notes[barIndex];
           playTone(noteData.freq);
+          displayNoteOnStaff(noteData);
           targetBar.classList.add('active');
           setTimeout(() => targetBar.classList.remove('active'), 120);
         }
